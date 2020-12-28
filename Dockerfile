@@ -161,7 +161,7 @@ RUN apt-get update && apt-get install -y \
 ENV ROS2_DISTRO dashing
 ENV ROS_MASTER_URI http://localhost:11311
 RUN apt-get update && apt-get install -y \
-    ros-${ROS2_DISTRO}-desktop=0.7.3-1* \
+    ros-${ROS2_DISTRO}-desktop=0.7.4-1* \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y \
