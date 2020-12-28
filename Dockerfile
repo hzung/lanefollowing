@@ -155,6 +155,7 @@ RUN rosdep init \
 ENV ROS1_DISTRO melodic
 RUN apt-get update && apt-get install -y \
     ros-${ROS1_DISTRO}-desktop=1.4.1-0* \
+    ros-${ROS1_DISTRO}-rosbridge-suite \
     && rm -rf /var/lib/apt/lists/*
 
 # install ros2 packages
@@ -206,3 +207,4 @@ RUN echo "source /opt/ros/${ROS2_DISTRO}/setup.bash" >> /home/${USER_NAME}/.bash
 RUN echo "source /lanefollowing/ros2_ws/install/local_setup.bash" >> /home/${USER_NAME}/.bashrc
 
 WORKDIR /lanefollowing
+
