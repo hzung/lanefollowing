@@ -3,13 +3,15 @@ from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import TwistStamped
 import message_filters
+from lgsvl_msgs.msg import Detection2DArray
 from datetime import datetime
 import os
 import errno
 import numpy as np
 import csv
 import cv2
-from train.utils import mkdir_p, CSV_PATH, IMG_PATH
+from train.utils import mkdir_p, IMG_PATH
+import json
 
 
 class Collect(Node):
@@ -17,46 +19,41 @@ class Collect(Node):
         super().__init__('collect', allow_undeclared_parameters=True, automatically_declare_parameters_from_overrides=True)
 
         self.get_logger().info('[{}] Initializing...'.format(self.get_name()))
-
-        mkdir_p(CSV_PATH)
         mkdir_p(IMG_PATH)
 
-        sub_center_camera = message_filters.Subscriber(self, CompressedImage, '/simulator/sensor/camera/center/compressed')
-        sub_left_camera = message_filters.Subscriber(self, CompressedImage, '/simulator/sensor/camera/left/compressed')
-        sub_right_camera = message_filters.Subscriber(self, CompressedImage, '/simulator/sensor/camera/right/compressed')
-        sub_control = message_filters.Subscriber(self, TwistStamped, '/simulator/control/command')
+        sub_center_camera = message_filters.Subscriber(self, CompressedImage, '/lgsvl/front_6mm_image_compressed')
+        ground_truth_2d = message_filters.Subscriber(self, Detection2DArray, '/lgsvl/export_2d_ground_truth_data_topic')
 
-        ts = message_filters.ApproximateTimeSynchronizer([sub_center_camera, sub_left_camera, sub_right_camera, sub_control], 1, 0.1)
+        ts = message_filters.ApproximateTimeSynchronizer([sub_center_camera, ground_truth_2d], 1, 0.1)
         ts.registerCallback(self.callback)
 
-        self.get_logger().info('[{}] Up and running...'.format(self.get_name()))
+        self.get_logger().info('[{}] New Up and running...'.format(self.get_name()))
 
-    def callback(self, center_camera, left_camera, right_camera, control):
-        ts_sec = center_camera.header.stamp.sec
-        ts_nsec = center_camera.header.stamp.nanosec
-        steer_cmd = control.twist.angular.x
-
-        self.get_logger().info("[{}.{}] Format: {}, Steering_cmd: {}".format(ts_sec, ts_nsec, center_camera.format, steer_cmd))
-
+    def callback(self, center_camera, ground_truth_2d_data):
         msg_id = str(datetime.now().isoformat())
-        self.save_image(center_camera, left_camera, right_camera, msg_id)
-        self.save_csv(steer_cmd, msg_id)
+        detection_result = [];
+        for detection in ground_truth_2d_data.detections:
+            detection_result.append({
+                'label': detection.label,
+                'x': detection.bbox.x,
+                'y': detection.bbox.y,
+                'width': detection.bbox.width,
+                'height': detection.bbox.height
+            });
+        self.save_ground_truth_2d(json.dumps(detection_result), msg_id)
+        self.save_image(center_camera, msg_id)
     
-    def save_image(self, center_camera, left_camera, right_camera, msg_id):
+    def save_image(self, center_camera, msg_id):
         center_img_np_arr = np.fromstring(bytes(center_camera.data), np.uint8)
-        left_img_np_arr = np.fromstring(bytes(left_camera.data), np.uint8)
-        right_img_np_arr = np.fromstring(bytes(right_camera.data), np.uint8)
         center_img_cv = cv2.imdecode(center_img_np_arr, cv2.IMREAD_COLOR)
-        left_img_cv = cv2.imdecode(left_img_np_arr, cv2.IMREAD_COLOR)
-        right_img_cv = cv2.imdecode(right_img_np_arr, cv2.IMREAD_COLOR)
-        cv2.imwrite(os.path.join(IMG_PATH, 'center-{}.jpg'.format(msg_id)), center_img_cv)
-        cv2.imwrite(os.path.join(IMG_PATH, 'left-{}.jpg'.format(msg_id)), left_img_cv)
-        cv2.imwrite(os.path.join(IMG_PATH, 'right-{}.jpg'.format(msg_id)), right_img_cv)
+        file_path = os.path.join(IMG_PATH, 'center-{}.jpg'.format(msg_id))
+        cv2.imwrite(file_path, center_img_cv)
 
-    def save_csv(self, steer_cmd, msg_id):
-        with open(os.path.join(CSV_PATH, 'training_data.csv'), 'a+') as f:
-            writer = csv.writer(f, delimiter=',')
-            writer.writerow([msg_id, steer_cmd])
+    def save_ground_truth_2d(self, ground_truth_2d_data_json, msg_id):
+        file_path = os.path.join(IMG_PATH, 'center-{}.json'.format(msg_id))
+        f = open(file_path, 'w')
+        f.write(ground_truth_2d_data_json)
+        f.close()
 
 
 def main(args=None):
