@@ -9,7 +9,7 @@
 - [Cài đặt Nvidia driver](https://www.linuxbabe.com/ubuntu/install-nvidia-driver-ubuntu-18-04)
 - [Cài đặt Nvidia Docker](https://github.com/NVIDIA/nvidia-docker)
 
-##Cài đặt collect data sử dụng ROS-1
+## Cài đặt collect data sử dụng ROS-1
 
 **B1.** Tải và chạy bản LGSVL 20.06
 
@@ -385,7 +385,6 @@ ros2 topic list
 # Log các message được bắn ra trong topic 
 ros2 topic echo /lgsvl/export_2d_ground_truth_data_topic
 
-# Kết quả
+```
 
 Như vậy chúng ta đã collect được data từ LGSVL Simulator sử dụng ROS-2
-```
