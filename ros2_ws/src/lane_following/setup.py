@@ -10,6 +10,7 @@ setup(
     ],
     py_modules=[
         'collect',
+        'collect_segment',
         'drive',
     ],
     data_files=[
@@ -42,6 +43,7 @@ setup(
         'console_scripts': [
             'collect = collect:main',
             'drive = drive:main',
+            'collect_segment = collect_segment:main'
         ],
     },
 )
